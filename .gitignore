@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS files
+*.DS_Store
+*.AppleDouble
+*.LSOverride
+.Spotlight-V100
+.Trashes
