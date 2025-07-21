@@ -12,9 +12,16 @@ venv/
 .vscode/
 .idea/
 
-# macOS files
+# macOS
 *.DS_Store
 *.AppleDouble
 *.LSOverride
 .Spotlight-V100
 .Trashes
+
+# data
+영어지표/
+한국어지표/
+res_mcnemar/
+res_merge_data*/
+rename_log*
