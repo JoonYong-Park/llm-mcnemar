@@ -22,6 +22,6 @@ venv/
 # data
 영어지표/dataset/
 한국어지표/dataset/
-res_mcnemar/
-res_merge_data*/
 rename_log*
+# res_mcnemar/
+# res_merge_data*/
