@@ -1,15 +1,16 @@
 import os
 import shutil
 
+
 def clean_recursively(target_dir, prefix, ext):
     # 1단계: 불필요한 파일 및 특정 폴더 삭제
     for dirpath, dirnames, filenames in os.walk(target_dir, topdown=True):
-        if '__MACOSX' in dirnames:
+        if "__MACOSX" in dirnames:
             try:
-                path_to_remove = os.path.join(dirpath, '__MACOSX')
+                path_to_remove = os.path.join(dirpath, "__MACOSX")
                 shutil.rmtree(path_to_remove)
                 print(f"  [DELETE] 불필요한 폴더: {path_to_remove}")
-                dirnames.remove('__MACOSX')
+                dirnames.remove("__MACOSX")
             except OSError as e:
                 print(f"  [ERROR] 폴더 삭제 중 오류 발생: {e}")
 
@@ -35,6 +36,7 @@ def clean_recursively(target_dir, prefix, ext):
             except OSError as e:
                 print(f"  [에러] 빈 폴더 삭제 중 오류 발생: {e}")
 
+
 def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, folders_to_preserve=[]):
     """
     최상위 폴더들을 순회하며, 각 폴더를 섹션으로 나누어 로그를 출력하고 정리 작업을 수행합니다.
@@ -47,7 +49,7 @@ def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, fo
         folder_path = os.path.join(root_folder, folder_name)
         if not os.path.isdir(folder_path):
             continue
-        
+
         print("-" * 50)
         print(f"📁 폴더 [{folder_name}] 처리 중...")
 
@@ -60,11 +62,12 @@ def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, fo
     print("-" * 50)
     print("\n✅ 모든 폴더의 데이터 정리가 완료되었습니다.")
 
+
 if __name__ == "__main__":
-    target_directory = './영어지표'
-    folders_to_keep = ['dataset'] 
-    prefix = 'samples'
-    extension = '.jsonl'
+    target_directory = "./영어지표"
+    folders_to_keep = ["dataset"]
+    prefix = "samples"
+    extension = ".jsonl"
     # extension = '.xlsx'
-    
+
     process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
