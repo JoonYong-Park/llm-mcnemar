@@ -25,3 +25,5 @@ venv/
 rename_log*
 # res_mcnemar/
 # res_merge_data*/
+res_*/
+temp/
