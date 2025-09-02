@@ -20,10 +20,12 @@ venv/
 .Trashes
 
 # data
-영어지표/dataset/
-한국어지표/dataset/
+영어지표/
+한국어지표/
 rename_log*
 # res_mcnemar/
 # res_merge_data*/
 res_*/
 temp/
+dataset/
+result/
