@@ -20,8 +20,9 @@ venv/
 .Trashes
 
 # data
-영어지표/
-한국어지표/
+*영어지표*/
+*한국어지표*/
+*법률지표*/
 rename_log*
 # res_mcnemar/
 # res_merge_data*/
