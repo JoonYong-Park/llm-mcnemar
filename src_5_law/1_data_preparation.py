@@ -115,29 +115,31 @@ def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, fo
 
 
 if __name__ == "__main__":
-    a = "midm"
-    b = "qwen"
+    a = "gpt4o-1120"
+    b = "llama-74b"
+    c = "llama-legal"
+    d = "qwen-72b"
 
-    target_directory = f"영어지표/{a}"
-    folders_to_keep = ["dataset"]
+    target_directory = f"법률지표/{a}"
+    folders_to_keep = ["llm_judge"]
     prefix = "samples"
     extension = ".jsonl"
     process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
 
-    target_directory = f"영어지표/{b}"
-    folders_to_keep = ["dataset"]
+    target_directory = f"법률지표/{b}"
+    folders_to_keep = ["llm_judge"]
     prefix = "samples"
     extension = ".jsonl"
     process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
 
-    target_directory = f"한국어지표/{a}"
-    folders_to_keep = ["dataset"]
+    target_directory = f"법률지표/{c}"
+    folders_to_keep = ["llm_judge"]
     prefix = "samples"
     extension = ".jsonl"
     process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
 
-    target_directory = f"한국어지표/{b}"
-    folders_to_keep = ["dataset"]
+    target_directory = f"법률지표/{d}"
+    folders_to_keep = ["llm_judge"]
     prefix = "samples"
     extension = ".jsonl"
     process_top_level_folders(target_directory, prefix, extension, folders_to_keep)

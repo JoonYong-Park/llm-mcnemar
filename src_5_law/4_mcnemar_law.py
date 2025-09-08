@@ -19,8 +19,8 @@ from domain_config_law import (
     HIERARCHY
 )
 
-model_A = "midm-legal"
-model_B = "qwen-3-14b"
+model_A = "llama-legal"
+model_B = "llama-74b"
 
 
 def load_koifeval_result(model, benchmark_name):

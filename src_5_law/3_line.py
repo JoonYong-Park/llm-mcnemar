@@ -11,9 +11,9 @@ def count_lines(file_path):
     return None
 
 # 기준 경로 설정
-base_dir = os.path.join("영어지표")
-folder1 = os.path.join(base_dir, "midm")
-folder2 = os.path.join(base_dir, "qwen")
+base_dir = os.path.join("법률지표")
+folder1 = os.path.join(base_dir, "llama-legal")
+folder2 = os.path.join(base_dir, "qwen-72b")
 
 # 폴더1에서 모든 파일 상대 경로 기준으로 dict 생성 (확장자 제외)
 file_dict_1 = {}

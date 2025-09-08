@@ -6,20 +6,8 @@ target_tasks_finance = [
 ]
 
 custom_keyword_map_finance = {
-    "kbl_knowledge_em": {
-        ("kbl","common_legal_mistake_qa_em"): "kbl_common_legal_mistake_qa_em",
-        ("kbl","common_legal_mistake_qa_reasoning_em"): "kbl_common_legal_mistake_qa_reasoning_em",
-        ("kbl","concept"): "kbl_legal_concept_qa_em",
-        ("kbl","offense"): "kbl_offense_component_qa_em",
-        ("kbl","query"): "kbl_query_and_statute_matching_qa_em",
-        ("kbl","hallucination"): "kbl_statute_hallucination_qa_em",
-        ("kbl","number"): "kbl_statute_number_and_content_matching_qa_em",
-    },
-    "kbl_reasoning": {
-        ("kbl","qa_p"): "kbl_case_relevance_qa_p_em",
-        ("kbl","qa_q"): "kbl_case_relevance_qa_q_em",
-        ("kbl","causal"): "kbl_causal_reasoning_qa_em",
-        ("kbl","statement"): "kbl_statement_consistency_qa_em",
+    "법률문서해석": {
+        ("kolbench", "dq"): "kolbench_dq",
     },
     "법률지식_QA": {
         ("kmmlu", "criminal_law"): "kmmlu_criminal_law",
@@ -42,8 +30,11 @@ custom_keyword_map_finance = {
         ("kbl","statement"): "kbl_statement_consistency_qa_em",
         ("kolbench","reason"): "kolbench_reason",
     },
-    "법률문서해석": {
-        ("kolbench", "dq"): "kolbench_dq",
+    "수학": {
+        ("gsm8k"): "gsm8k",
+    },
+    "한국어생성": {
+        ("comprehensivegen"): "ko_comprehensivegen",
     },
     "한국어이해": {
         ("honorifics",): "k_honorifics",
@@ -51,24 +42,33 @@ custom_keyword_map_finance = {
         ("lexicon",): "k_lexicon",
         ("kobalt","700"): "kobalt_700",
     },
-    "한국어생성": {
-        ("comprehensivegen"): "ko_comprehensivegen",
+    "한국어전문지식": {
+        ("sovereign", "culture"): "ko_sovereign_culture_folklore",
+        ("sovereign", "education"): "ko_sovereign_education",
+        ("sovereign", "economics"): "ko_sovereign_economics_finance",
+        ("sovereign", "geography"): "ko_sovereign_geography",
+        ("sovereign", "history"): "ko_sovereign_history",
+        ("sovereign", "language"): "ko_sovereign_language_literature",
+        ("sovereign", "politics"): "ko_sovereign_politics",
+        ("sovereign", "society"): "ko_sovereign_society",
     },
     "한국어추론": {
         ("ko-winogrande"): "ko-winogrande",
     },
-    "한국어전문지식": {
-        ("sovereign", "culture"): "ko_sovereign_culture_folklore",
-        ("sovereign", "education"): "ko_sovereign_education",
-        ("sovereign", "geography"): "ko_sovereign_geography",
-        ("sovereign", "history"): "ko_sovereign_history",
-        ("sovereign", "language"): "ko_sovereign_language_literature",
-        ("sovereign", "economics"): "ko_sovereign_economics_finance",
-        ("sovereign", "politics"): "ko_sovereign_politics",
-        ("sovereign", "society"): "ko_sovereign_society",
+    "kbl_knowledge_em": {
+        ("kbl","common_legal_mistake_qa_em"): "kbl_common_legal_mistake_qa_em",
+        ("kbl","common_legal_mistake_qa_reasoning_em"): "kbl_common_legal_mistake_qa_reasoning_em",
+        ("kbl","concept"): "kbl_legal_concept_qa_em",
+        ("kbl","offense"): "kbl_offense_component_qa_em",
+        ("kbl","query"): "kbl_query_and_statute_matching_qa_em",
+        ("kbl","hallucination"): "kbl_statute_hallucination_qa_em",
+        ("kbl","number"): "kbl_statute_number_and_content_matching_qa_em",
     },
-    "수학": {
-        ("gsm8k"): "gsm8k",
+    "kbl_reasoning": {
+        ("kbl","qa_p"): "kbl_case_relevance_qa_p_em",
+        ("kbl","qa_q"): "kbl_case_relevance_qa_q_em",
+        ("kbl","causal"): "kbl_causal_reasoning_qa_em",
+        ("kbl","statement"): "kbl_statement_consistency_qa_em",
     },
 }
 
