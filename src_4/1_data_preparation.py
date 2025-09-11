@@ -43,8 +43,9 @@ def clean_recursively(target_dir, prefix, ext):
     불필요한 파일과 폴더 삭제합니다.
     유지할 파일:
     - prefix로 시작하고 ext로 끝나는 파일
-    - samples로 시작하고 .json으로 끝나는 파일
+    - samples로 시작하고 .jsonl로 끝나는 파일
     - Scenario로 시작하고 all.json으로 끝나는 파일
+    - results로 시작하지 않는 .jsonl 파일
     """
     for dirpath, dirnames, filenames in os.walk(target_dir, topdown=True):
         if "__MACOSX" in dirnames:
@@ -62,8 +63,9 @@ def clean_recursively(target_dir, prefix, ext):
             # 유지할 파일 조건들
             should_keep = (
                 (filename.startswith(prefix) and filename.endswith(ext)) or  # 기본 조건
-                (filename.startswith("samples") and filename.endswith(".json")) or  # samples로 시작하고 .json으로 끝나는 파일
-                (filename.startswith("Scenario") and filename.endswith("all.json"))  # Scenario로 시작하고 all.json으로 끝나는 파일
+                (filename.startswith("samples") and filename.endswith(".jsonl")) or  # samples로 시작하고 .jsonl로 끝나는 파일
+                (filename.startswith("Scenario") and filename.endswith("all.json")) or  # Scenario로 시작하고 all.json으로 끝나는 파일
+                (filename.endswith(".jsonl") and not filename.startswith("results"))  # results로 시작하지 않는 .json 파일
             )
             
             if not should_keep:
@@ -92,8 +94,9 @@ def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, fo
     print(f"==> 데이터 폴더:'{root_folder}' 폴더의 데이터 정리를 시작합니다...")
     print(f"==> 유지할 파일:")
     print(f"    - '{prefix_to_keep}'로 시작하는 '{extension_to_keep}' 파일")
-    print(f"    - 'samples'로 시작하고 '.json'으로 끝나는 파일")
+    print(f"    - 'samples'로 시작하고 '.jsonl'로 끝나는 파일")
     print(f"    - 'Scenario'로 시작하고 'all.json'으로 끝나는 파일")
+    print(f"    - 'results'로 시작하지 않는 '.json' 파일")
     print(f"==> 유지할 폴더: {folders_to_preserve}")
 
     for folder_name in sorted(os.listdir(root_folder)):
@@ -115,8 +118,8 @@ def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, fo
 
 
 if __name__ == "__main__":
-    a = "midm"
-    b = "qwen"
+    a = "A.X-3.1"
+    b = "Solar-pro2-31B"
 
     target_directory = f"영어지표/{a}"
     folders_to_keep = ["dataset"]
