@@ -118,29 +118,26 @@ def process_top_level_folders(root_folder, prefix_to_keep, extension_to_keep, fo
 
 
 if __name__ == "__main__":
-    a = "A.X-3.1"
-    b = "Solar-pro2-31B"
-
-    target_directory = f"영어지표/{a}"
     folders_to_keep = ["dataset"]
     prefix = "samples"
     extension = ".jsonl"
-    process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
-
-    target_directory = f"영어지표/{b}"
-    folders_to_keep = ["dataset"]
-    prefix = "samples"
-    extension = ".jsonl"
-    process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
-
-    target_directory = f"한국어지표/{a}"
-    folders_to_keep = ["dataset"]
-    prefix = "samples"
-    extension = ".jsonl"
-    process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
-
-    target_directory = f"한국어지표/{b}"
-    folders_to_keep = ["dataset"]
-    prefix = "samples"
-    extension = ".jsonl"
-    process_top_level_folders(target_directory, prefix, extension, folders_to_keep)
+    
+    english_folder = "영어지표"
+    if os.path.exists(english_folder):
+        print(f"=== {english_folder} 폴더 처리 시작 ===")
+        for model_name in os.listdir(english_folder):
+            model_path = os.path.join(english_folder, model_name)
+            if os.path.isdir(model_path) and model_name != "dataset":
+                print(f"\n처리 중인 모델: {model_name}")
+                process_top_level_folders(model_path, prefix, extension, folders_to_keep)
+        print(f"=== {english_folder} 폴더 처리 완료 ===\n")
+    
+    korean_folder = "한국어지표"
+    if os.path.exists(korean_folder):
+        print(f"=== {korean_folder} 폴더 처리 시작 ===")
+        for model_name in os.listdir(korean_folder):
+            model_path = os.path.join(korean_folder, model_name)
+            if os.path.isdir(model_path) and model_name != "dataset":
+                print(f"\n처리 중인 모델: {model_name}")
+                process_top_level_folders(model_path, prefix, extension, folders_to_keep)
+        print(f"=== {korean_folder} 폴더 처리 완료 ===\n")
