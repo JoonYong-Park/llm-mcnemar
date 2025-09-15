@@ -1,3 +1,11 @@
+BENCHMARKS_LIST = ['k_referential','k_referential_hard','kmmlu','ko_sovereign','kobest','Ko-ComprehensiveGen','Ko-ComprehensiveGen-hard','Ko-GSM8K','KoIFEval','korean_national_civil_service','korean_naturalization','ko-winogrande','kpragmatics','kpragmatics_hard']
+
+### MS 지표
+# BENCHMARKS = ['kmmlu', 'Ko-ComprehensiveGen-hard', 'KoIFEval', 'ko_sovereign', 'ko-winogrande', 'kobest', 'korean_naturalization','Korean_national_civil_service', 'kpragmatics_hard', 'k_referential_hard']
+# DOMAIN = ['한국어이해-CKP','한국어생성-CKP','한국어추론-CKP','한국전문지식-CKP','한국어지시이행도-CKP','한국사회문화-CKP']
+# DOMAIN_NEW = ['KMMLU_Applied_Science','KMMLU_HUMSS','KMMLU_Other','KMMLU_STEM','kobest_한국어이해','kobest_한국어추론','ko_sovereign_한국사회문화','한국어수학','ko_sovereign_한국전문지식','click_언어','click_문화']
+
+### New Framework
 # BENCHMARKS = [
 #     'click',
 #     'haerae',
@@ -19,24 +27,45 @@
 #     'kpragmatics',
 #     'kpragmatics_hard',
 # ]
-# DOMAIN = ['한국어이해','한국어생성','한국어추론','한국사회문화','한국전문지식','한국어지시이행도','kobest_한국어이해','kobest_한국어추론','ko_sovereign_한국사회문화','한국어수학','ko_sovereign_한국전문지식','click_언어','click_문화']
+# DOMAIN = ['한국어이해','한국어생성','한국어추론','한국사회문화','한국전문지식','한국어지시이행도','한국어수학','kobest_한국어이해','kobest_한국어추론','ko_sovereign_한국사회문화','ko_sovereign_한국전문지식','click_언어','click_문화']
 # DOMAIN_NEW = ['KMMLU_Applied_Science','KMMLU_HUMSS','KMMLU_Other','KMMLU_STEM']
 
-BENCHMARKS = ['hrm8k']
-DOMAIN = ['한국어수학']
+### Previous Framework
+BENCHMARKS = [
+    'k_referential',
+    'k_referential_hard',
+    'kmmlu',
+    'ko_sovereign',
+    'Ko-ComprehensiveGen',
+    'Ko-ComprehensiveGen-hard',
+    'ko-winogrande',
+    'kobest',
+    'KoIFEval',
+    'kpragmatics',
+    'kpragmatics_hard',
+]
+DOMAIN = ['한국어이해','한국어생성','한국어추론','한국사회문화','한국전문지식','한국어지시이행도','kobest_한국어이해','kobest_한국어추론','ko_sovereign_한국사회문화','ko_sovereign_한국전문지식']
 DOMAIN_NEW = ['KMMLU_Applied_Science','KMMLU_HUMSS','KMMLU_Other','KMMLU_STEM']
 
 
-BENCHMARKS_LIST = ['k_referential','k_referential_hard','kmmlu','ko_sovereign','kobest','Ko-ComprehensiveGen','Ko-ComprehensiveGen-hard','Ko-GSM8K','KoIFEval','korean_national_civil_service','korean_naturalization','ko-winogrande','kpragmatics','kpragmatics_hard']
-
 DOMAIN_TO_BENCHMARKS = {
-    '한국어이해': ['kpragmatics','kobest_boolq','kobest_sentineg','ko_sovereign_language_literature','kobalt700','click_functional_csat','click_functional_kedu','click_functional_pse','click_grammar_csat','click_grammar_kedu','click_grammar_topik','click_textual_csat','click_textual_topik'],
-    '한국어생성': ['Ko-ComprehensiveGen','ko_commongenv2'],
-    '한국어추론': ['ko-winogrande','kobest_copa','kobest_hellaswag','kobest_wic'],
-    '한국사회문화': ['k_referential','ko_sovereign_culture_folklore','ko_sovereign_society','haerae','click_economy_kedu','click_economy_kiip','click_geography_csat','click_geography_kedu','click_geography_kiip','click_history_kedu','click_history_khb','click_history_pse','click_law_kiip','click_law_psat','click_politics_kedu','click_politics_kiip','click_popular_kiip','click_popular_kedu','click_society_kedu','click_society_kiip','click_tradition_kedu','click_tradition_kiip'],
-    '한국전문지식': ['kmmlu','ko_sovereign_history','ko_sovereign_law','ko_sovereign_economics_finance','ko_sovereign_politics','ko_sovereign_education','ko_sovereign_geography','korean_national_civil_service','korean_naturalization'],
+    ### New Framework
+    # '한국어지시이행도': ['KoIFEval'],
+    # '한국어이해': ['kpragmatics','kobest_boolq','kobest_sentineg','ko_sovereign_language_literature','kobalt700','click_functional_csat','click_functional_kedu','click_functional_pse','click_grammar_csat','click_grammar_kedu','click_grammar_topik','click_textual_csat','click_textual_topik'],
+    # '한국어생성': ['Ko-ComprehensiveGen','ko_commongenv2'],
+    # '한국어추론': ['ko-winogrande','kobest_copa','kobest_hellaswag','kobest_wic'],
+    # '한국사회문화': ['k_referential','ko_sovereign_culture_folklore','ko_sovereign_society','haerae','click_economy_kedu','click_economy_kiip','click_geography_csat','click_geography_kedu','click_geography_kiip','click_history_kedu','click_history_khb','click_history_pse','click_law_kiip','click_law_psat','click_politics_kedu','click_politics_kiip','click_popular_kiip','click_popular_kedu','click_society_kedu','click_society_kiip','click_tradition_kedu','click_tradition_kiip'],
+    # '한국전문지식': ['kmmlu','ko_sovereign_history','ko_sovereign_law','ko_sovereign_economics_finance','ko_sovereign_politics','ko_sovereign_education','ko_sovereign_geography'],
+    # '한국어수학': ['hrm8k'],
+
+    ### Previous Framework
     '한국어지시이행도': ['KoIFEval'],
-    '한국어수학': ['hrm8k'],
+    '한국어이해': ['kpragmatics','kobest_boolq','kobest_sentineg','ko_sovereign_language_literature'],
+    '한국어생성': ['Ko-ComprehensiveGen'],
+    '한국어추론': ['ko-winogrande','kobest_copa','kobest_hellaswag','kobest_wic'],
+    '한국사회문화': ['k_referential','ko_sovereign_culture_folklore','ko_sovereign_society'],
+    '한국전문지식': ['kmmlu','ko_sovereign_history','ko_sovereign_law','ko_sovereign_economics_finance','ko_sovereign_politics','ko_sovereign_education','ko_sovereign_geography'],
+    
     'kobest_한국어이해': ['kobest_boolq', 'kobest_sentineg'],
     'kobest_한국어추론': ['kobest_copa', 'kobest_hellaswag', 'kobest_wic'],
     'ko_sovereign_한국사회문화': ['ko_sovereign_culture_folklore', 'ko_sovereign_society'],
@@ -44,13 +73,9 @@ DOMAIN_TO_BENCHMARKS = {
     'click_언어': ['click_functional_csat','click_functional_kedu','click_functional_pse','click_grammar_csat','click_grammar_kedu','click_grammar_topik','click_textual_csat','click_textual_topik'],
     'click_문화': ['click_economy_kedu','click_economy_kiip','click_geography_csat','click_geography_kedu','click_geography_kiip','click_history_kedu','click_history_khb','click_history_pse','click_law_kiip','click_law_psat','click_politics_kedu','click_politics_kiip','click_popular_kiip','click_popular_kedu','click_society_kedu','click_society_kiip','click_tradition_kedu','click_tradition_kiip'],
     
-    
-
-    
-
+    '한국어지시이행도-CKP': ['KoIFEval'],
     '한국어이해-CKP': ['kpragmatics_hard','kobest_boolq','kobest_sentineg','ko_sovereign_language_literature'],
     '한국어생성-CKP': ['Ko-ComprehensiveGen-hard'],
-    '한국어지시이행도-CKP': ['KoIFEval'],
     '한국어추론-CKP': ['ko-winogrande','kobest_copa','kobest_hellaswag','kobest_wic'],
     '한국사회문화-CKP': ['k_referential_hard','ko_sovereign_culture_folklore','ko_sovereign_society'],
     '한국전문지식-CKP': ['kmmlu','ko_sovereign_history','ko_sovereign_law','ko_sovereign_economics_finance','ko_sovereign_politics','ko_sovereign_education','ko_sovereign_geography','korean_national_civil_service','korean_naturalization'],
@@ -103,8 +128,8 @@ DOMAIN_TO_BENCHMARKS_AVERAGE = {
     '한국사회문화': ['k_referential','ko_sovereign_한국사회문화'],
     '한국전문지식': ['kmmlu','ko_sovereign_한국전문지식','click_문화','haerae','korean_national_civil_service','korean_naturalization'],
     '한국어수학': ['hrm8k'],
-    # '한국어지시이행도': ['KoIFEval_illa','KoIFEval_ilsa','KoIFEval_plla','KoIFEval_plsa'],
-    '한국어지시이행도': ['KoIFEval_ilsa','KoIFEval_plla'],
+    '한국어지시이행도': ['KoIFEval_illa','KoIFEval_ilsa','KoIFEval_plla','KoIFEval_plsa'],
+    # '한국어지시이행도': ['KoIFEval_ilsa','KoIFEval_plla'],
 }
 GROUPED_RAW_CATEGORIES = {
         'kobest_한국어이해': ['kobest_boolq', 'kobest_sentineg'],
