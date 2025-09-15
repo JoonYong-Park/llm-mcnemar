@@ -7,39 +7,45 @@ from openpyxl.utils import get_column_letter
 import sys
 import json
 
-model_A = "midm"
-model_B = "qwen"
+model_A = "Midm-Pro-v2.4"
+model_B = "Qwen-3-32B"
 
-### 전체 벤치마크
+### MS 지표
+# BENCHMARKS = ['ifeval','musr','gpqa','winogrande','bbh','openbookqa','drop','boolq','piqa','gsm8k','mmlu_pro']
+# DOMAIN = ['지시이행도-CKP', '추론-CKP', '수학-CKP', '전문지식-CKP']
+
+### New Framework
 # BENCHMARKS = ['aime2025','aqua-rat','bbh','gpqa','gsm8k','humaneval','ifeval','livecodebench','math','mbpp','mmlu_pro','musr','winogrande']
-# DOMAIN = ['추론','전문지식','지시이행도','수학','코딩']
+# DOMAIN = ['지시이행도-내부','추론-내부','수학-내부','전문지식-내부','코딩-내부']
 
-### 수학 벤치마크
-BENCHMARKS = ['aime2025','gsm8k','humaneval','livecodebench','math','mbpp']
-DOMAIN = ['코딩']
+### Previous Framework
+BENCHMARKS = ['ifeval','musr','gpqa','winogrande','bbh','gsm8k','math','mmlu_pro']
+DOMAIN = ['지시이행도-내부','추론-내부','수학-내부','전문지식-내부']
 
-### sm
-# BENCHMARKS = ['bbh','boolq','drop','gpqa','gsm8k','ifeval','mmlu_pro','winogrande','openbookqa','piqa']
-# DOMAIN = ['전문지식-CKP','지시이행도-CKP','수학-CKP']
-
-BENCHMARKS_LIST = ['bbh','boolq','drop','gpqa','gsm8k','ifeval','mmlu_pro','musr','openbookqa','piqa','winogrande','math','mbpp','aqua-rat','aime2025','humaneval','mbpp','livecodebench','HLE']
 DOMAIN_TO_BENCHMARKS = {
+    ### Previous Framework
+    # '지시이행도-내부': ['ifeval'],
+    # '추론-내부': ['musr','gpqa','winogrande','bbh'],
+    # '수학-내부': ['gsm8k','math'],
+    # '전문지식-내부': ['mmlu_pro'],
+
+    ### New Framework
+    '지시이행도-내부': ['ifeval'],
+    '추론-내부': ['musr','gpqa','winogrande','bbh'],
+    '수학-내부': ['gsm8k','math','aqua-rat','aime2025'],
+    '전문지식-내부': ['mmlu_pro'],
+    '코딩-내부': ['humaneval','mbpp','livecodebench'],
+
     '지시이행도-CKP': ['ifeval'],
     '추론-CKP': ['musr','gpqa','winogrande','bbh','openbookqa','drop', 'boolq','piqa'],
-    '수학-CKP': ['math'],
+    '수학-CKP': ['gsm8k'],
     '전문지식-CKP': ['mmlu_pro'],
-
-    '추론': ['musr','gpqa','winogrande','bbh'],
-    '전문지식': ['mmlu_pro'],
-    '지시이행도': ['ifeval'],
-    '수학': ['gsm8k','math','aqua-rat','aime2025'],
-    '코딩': ['humaneval','mbpp','livecodebench'],
-    # 'HLE': ['HLE'],
 }
+
 HIERARCHY = {
     "ifeval": {
-        # 'ifeval':['ifeval_illa','ifeval_ilsa','ifeval_plla','ifeval_plsa']
-        'ifeval':['ifeval_ilsa','ifeval_plla']
+        'ifeval':['ifeval_illa','ifeval_ilsa','ifeval_plla','ifeval_plsa']
+        # 'ifeval':['ifeval_ilsa','ifeval_plla']
     },
     "bbh":{
         'bbh':["bbh_"]
@@ -72,12 +78,12 @@ def load_ifeval_result(model, benchmark_name):
             data = json.loads(line)
             score = data["score"] if "score" in data else data
 
-            # rows.append({"id": f"{i}_plsa", "category": "ifeval_plsa", f"{model}_EM": score["prompt_level_strict_acc"]})
+            rows.append({"id": f"{i}_plsa", "category": "ifeval_plsa", f"{model}_EM": score["prompt_level_strict_acc"]})
             for j, val in enumerate(score["inst_level_strict_acc"], 1):
                 rows.append({"id": f"{i}-{j}_ilsa", "category": "ifeval_ilsa", f"{model}_EM": val})
             rows.append({"id": f"{i}_plla", "category": "ifeval_plla", f"{model}_EM": score["prompt_level_loose_acc"]})
-            # for j, val in enumerate(score["inst_level_loose_acc"], 1):
-            #     rows.append({"id": f"{i}-{j}_illa", "category": "ifeval_illa", f"{model}_EM": val})
+            for j, val in enumerate(score["inst_level_loose_acc"], 1):
+                rows.append({"id": f"{i}-{j}_illa", "category": "ifeval_illa", f"{model}_EM": val})
     
     return pd.DataFrame(rows)
 
