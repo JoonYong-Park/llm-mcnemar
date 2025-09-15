@@ -19,8 +19,8 @@ from domain_config import (
     HIERARCHY
 )
 
-model_A = "midm"
-model_B = "qwen"
+model_A = "Midm-Pro-v2.4"
+model_B = "Solar-pro2-31B"
 
 
 def load_koifeval_result(model, benchmark_name):
@@ -37,12 +37,12 @@ def load_koifeval_result(model, benchmark_name):
             data = json.loads(line)
             score = data["score"] if "score" in data else data
 
-            # rows.append({"id": f"{i}_plsa", "category": "KoIFEval_plsa", f"{model}_EM": score["prompt_level_strict_acc"]})
+            rows.append({"id": f"{i}_plsa", "category": "KoIFEval_plsa", f"{model}_EM": score["prompt_level_strict_acc"]}) # 기존에 주석
             for j, val in enumerate(score["inst_level_strict_acc"], 1):
                 rows.append({"id": f"{i}-{j}_ilsa", "category": "KoIFEval_ilsa", f"{model}_EM": val})
             rows.append({"id": f"{i}_plla", "category": "KoIFEval_plla", f"{model}_EM": score["prompt_level_loose_acc"]})
-            # for j, val in enumerate(score["inst_level_loose_acc"], 1):
-            #     rows.append({"id": f"{i}-{j}_illa", "category": "KoIFEval_illa", f"{model}_EM": val})
+            for j, val in enumerate(score["inst_level_loose_acc"], 1): # 기존에 주석
+                rows.append({"id": f"{i}-{j}_illa", "category": "KoIFEval_illa", f"{model}_EM": val}) # 기존에 주석
     
     return pd.DataFrame(rows)
 
