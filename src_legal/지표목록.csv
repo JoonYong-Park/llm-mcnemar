@@ -7,9 +7,6 @@
 법률지표,법률 추론,KoLBench_Reasoning,187
 법률지표,법률 추론,KBL_법적추론,288
 법률지표,법률 문서 해석 (문서QA),KoLBench_DQ:kt:,365
-법률지표,법률 문서 해석 (문서QA),RAG_law:kt:,504
-법률지표,법률 문서 생성,KoLBench_DocGen,90
-법률지표,법률 문서 요약,KoLBench_Summary,189
 법률지표,법률 지식 QA,KBL_BarExam,"2,658"
 공통지표,지시이행도,KoIFEval,506
 공통지표,수학,gsm8k,"1,319"

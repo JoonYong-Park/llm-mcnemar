@@ -1,35 +1,162 @@
 import os
+import re
 import json
 import pandas as pd
 import ast
+from collections import defaultdict
+from pathlib import Path
 from statsmodels.stats.contingency_tables import mcnemar
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
-import sys
 
-model_A = "Midm-250-pro-march26_THINK_ON"
-model_B = "Midm-250-pro-march26_THINK_OFF"
-language = "한국적지표" 
-mcnemar_version = "dsb"
+from domain_config import *
 
-if mcnemar_version == "dsb":
-    from domain_config_dsb import *
-elif mcnemar_version == "general" :
-    from domain_config_general import *
+# ── 검증 대상 ──
+language = "법률지표"
+model_A = "gemma-4-26B-A4B-Legel"
+model_B = "midm-legal"
+# model_B = "llama-legal"
+# model_B = "gemma-4-26B-A4B-it"
+# model_B = "gpt-5.4-mini"
+# model_B = "midm-250-pro-march26"
 
-if language == "한국적지표" :
-    BENCHMARKS = KOR_BENCHMARKS
-    DOMAIN = KOR_DOMAIN
-elif language == "영어지표" :
-    BENCHMARKS = EN_BENCHMARKS
-    DOMAIN = EN_DOMAIN
-elif language == "법률지표" :
-    BENCHMARKS = LAW_BENCHMARKS
-    DOMAIN = LAW_DOMAIN
-elif language == "금융지표" :
-    BENCHMARKS = FINANCE_BENCHMARKS
-    DOMAIN = FINANCE_DOMAIN
+BENCHMARKS = LAW_BENCHMARKS
+DOMAIN = LAW_DOMAIN
+
+DOMAIN_SLUG = {
+    "법률지표": "legal_benchmarks",
+    "공통지표": "common_benchmarks",
+}
+
+
+def build_result_filename(model_A: str, model_B: str, lang: str) -> str:
+    domain = DOMAIN_SLUG.get(lang, lang)
+    return (
+        f"{model_A}"
+        f"__vs__{model_B}__{domain}.xlsx"
+    )
+
+# 정규화된 법률 데이터 루트 (cwd 무관하게 repo 루트 기준)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+LEGAL_BASE = REPO_ROOT / "법률"
+
+_TS_RE = re.compile(r"_\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+(?:_v\d+)?$")
+
+
+def resolve_bench_dirs(model, folder_name):
+    """법률/{model}/**/{folder_name}/{run}/ 형태에서 samples 를 직접 담은 run 폴더들을 반환."""
+    root = LEGAL_BASE / model
+    hits = set()
+    for r, _dirs, files in os.walk(root):
+        if any(_is_sample_file(f) for f in files):
+            if folder_name in str(r).split(os.sep):
+                hits.add(r)
+    return sorted(hits)
+
+
+def _clean_task(name):
+    """파일명 task 에서 legal_cot_ / legal_ / cot_ 접두어 제거."""
+    for p in ("legal_cot_", "legal_", "cot_"):
+        if name.startswith(p):
+            return name[len(p):]
+    return name
+
+
+def norm_task_name(filename):
+    """samples_ 접두어와 뒤쪽 타임스탬프 제거한 task 이름."""
+    name = os.path.splitext(filename)[0]
+    if name.startswith("samples_"):
+        name = name[len("samples_"):]
+    return _TS_RE.sub("", name)
+
+
+def derive_category(bench_clean, task_norm):
+    """모델 간 일치하는 clean 카테고리명 생성."""
+    if bench_clean in SINGLE_FILE_BENCH:
+        return bench_clean
+    return _clean_task(task_norm)
+
+
+def benchmark_display_name(benchmark_name: str) -> str:
+    """엑셀 출력용 벤치마크 표시명."""
+    if benchmark_name == KBL_BAR_EXAM_BENCHMARK:
+        return KBL_BAR_EXAM_LABEL
+    return benchmark_name
+
+
+def kbl_bar_exam_group(final_df: pd.DataFrame, domain: str | None = None) -> pd.DataFrame:
+    """kbl_bar_exam_em 벤치마크 전체 또는 분야(civil/...)별 서브셋."""
+    sub = final_df[final_df["benchmark"] == KBL_BAR_EXAM_BENCHMARK]
+    if domain is None:
+        return sub
+    token = f"_{domain}_"
+    return sub[sub["category"].astype(str).str.contains(token, regex=False)]
+
+
+def kbl_bar_exam_aggregate_labels() -> list[str]:
+    labels = [KBL_BAR_EXAM_LABEL]
+    labels.extend(f"{KBL_BAR_EXAM_LABEL}_{d}" for d in KBL_BAR_EXAM_DOMAINS)
+    return labels
+
+
+def kolbench_combined_group(final_df: pd.DataFrame) -> pd.DataFrame:
+    """kolbench_qa + kolbench_reason + kolbench_dq 합산 서브셋."""
+    present = set(final_df["benchmark"].unique())
+    keys = [b for b in KOLBENCH_BENCHMARKS if b in present]
+    if not keys:
+        return final_df.iloc[0:0].copy()
+    return final_df[final_df["benchmark"].isin(keys)].copy()
+
+
+_TS_FIND = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+(?:_v\d+)?")
+
+
+def _is_sample_file(filename: str) -> bool:
+    return filename.startswith("samples") and (
+        filename.endswith(".jsonl") or filename.endswith(".xlsx")
+    )
+
+
+def _pick_latest_per_task(files):
+    """files: [(folder, filename)]. task 당 최신 1개.
+    jsonl/xlsx 가 모두 있으면 jsonl 우선, jsonl 없을 때만 xlsx 사용."""
+    by_task = defaultdict(list)
+    for folder, fn in files:
+        by_task[norm_task_name(fn)].append((folder, fn))
+
+    picked = []
+    for _task, items in by_task.items():
+        jsonls = [(d, f) for d, f in items if f.endswith(".jsonl")]
+        xlsxs = [(d, f) for d, f in items if f.endswith(".xlsx")]
+        pool = jsonls if jsonls else xlsxs
+
+        best = None
+        for folder, fn in pool:
+            m = _TS_FIND.search(fn)
+            ts = m.group(0) if m else ""
+            if best is None or ts > best[0]:
+                best = (ts, folder, fn)
+        picked.append((best[1], best[2]))
+    return picked
+
+
+def _list_sample_files(dirs):
+    """run 폴더에서 samples*.jsonl / samples*.xlsx 수집 후 task 당 최신 1개."""
+    all_files = [
+        (d, f) for d in dirs for f in os.listdir(d)
+        if _is_sample_file(f) and not f.startswith("._")
+    ]
+    return _pick_latest_per_task(all_files)
+
+
+def read_sample_dataframe(file_path: str) -> pd.DataFrame:
+    """samples jsonl/xlsx → DataFrame."""
+    if file_path.endswith(".jsonl"):
+        return pd.read_json(file_path, lines=True, encoding="utf-8-sig")
+    if file_path.endswith(".xlsx"):
+        return pd.read_excel(file_path, engine="openpyxl")
+    raise ValueError(f"[❌ 오류] 지원하지 않는 samples 형식: {file_path}")
 
 # 정답률 점수 열 파란색 칠하기.
 def color_accuracy_columns(file_path: str, sheet_name: str, model_A: str, model_B: str):
@@ -176,28 +303,72 @@ def _to_list_bool(v):
     # 단일 스칼라 fallback
     return [_to_bool(s)]
 
-# 특정 벤치마크 점수 불러오기
+def _ifeval_rows_from_record(data, benchmark_name: str, model: str, row_idx: int) -> list[dict]:
+    score = data["score"] if "score" in data else data
+
+    def _as_list(val):
+        if isinstance(val, list):
+            return val
+        if isinstance(val, str):
+            try:
+                parsed = ast.literal_eval(val)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+        return [val]
+
+    rows = [
+        {
+            "id": f"{benchmark_name}_{row_idx}_plsa",
+            "benchmark": benchmark_name,
+            "category": f"{benchmark_name}_plsa",
+            f"{model}_EM": score["prompt_level_strict_acc"],
+        }
+    ]
+    for j, val in enumerate(_as_list(score["inst_level_strict_acc"]), 1):
+        rows.append({
+            "id": f"{benchmark_name}_{row_idx}-{j}_ilsa",
+            "benchmark": benchmark_name,
+            "category": f"{benchmark_name}_ilsa",
+            f"{model}_EM": val,
+        })
+    rows.append({
+        "id": f"{benchmark_name}_{row_idx}_plla",
+        "benchmark": benchmark_name,
+        "category": f"{benchmark_name}_plla",
+        f"{model}_EM": score["prompt_level_loose_acc"],
+    })
+    for j, val in enumerate(_as_list(score["inst_level_loose_acc"]), 1):
+        rows.append({
+            "id": f"{benchmark_name}_{row_idx}-{j}_illa",
+            "benchmark": benchmark_name,
+            "category": f"{benchmark_name}_illa",
+            f"{model}_EM": val,
+        })
+    return rows
+
+
+# 특정 벤치마크 점수 불러오기 (koifeval 등 ifeval 형식)
 def load_ifeval_result(model, benchmark_name):
-    folder_path = f"./{language}/{model}/{benchmark_name}/"
-    files = [f for f in os.listdir(folder_path) if f.endswith(".jsonl")]
+    dirs = resolve_bench_dirs(model, LAW_BENCH_FOLDERS[benchmark_name])
+    files = _list_sample_files(dirs)
     if not files:
-        raise FileNotFoundError(f"[❌ 없음] {folder_path}에 .jsonl 파일이 없습니다.")
-    
-    filepath = os.path.join(folder_path, files[0])
+        raise FileNotFoundError(f"[❌ 없음] {benchmark_name}: samples jsonl/xlsx 파일이 없습니다.")
+
+    folder, fn = files[0]
+    filepath = os.path.join(folder, fn)
     rows = []
 
-    with open(filepath, "r", encoding="utf-8") as f:
-        for i, line in enumerate(f):
-            data = json.loads(line)
-            score = data["score"] if "score" in data else data
+    if fn.endswith(".jsonl"):
+        with open(filepath, "r", encoding="utf-8") as f:
+            for i, line in enumerate(f):
+                rows.extend(_ifeval_rows_from_record(json.loads(line), benchmark_name, model, i))
+    else:
+        df = read_sample_dataframe(filepath)
+        for i, record in df.iterrows():
+            rows.extend(_ifeval_rows_from_record(record.to_dict(), benchmark_name, model, i))
 
-            rows.append({"id": f"{benchmark_name}_{i}_plsa", "benchmark":f"{benchmark_name}", "category": f"{benchmark_name}_plsa", f"{model}_EM": score["prompt_level_strict_acc"]})
-            for j, val in enumerate(score["inst_level_strict_acc"], 1):
-                rows.append({"id": f"{benchmark_name}_{i}-{j}_ilsa", "benchmark":f"{benchmark_name}", "category": f"{benchmark_name}_ilsa", f"{model}_EM": val})
-            rows.append({"id": f"{benchmark_name}_{i}_plla", "benchmark":f"{benchmark_name}", "category": f"{benchmark_name}_plla", f"{model}_EM": score["prompt_level_loose_acc"]})
-            for j, val in enumerate(score["inst_level_loose_acc"], 1):
-                rows.append({"id": f"{benchmark_name}_{i}-{j}_illa", "benchmark":f"{benchmark_name}", "category": f"{benchmark_name}_illa", f"{model}_EM": val})
-    
     return pd.DataFrame(rows)
 def load_ifbench_result(model, benchmark_name):
     folder_path = f"./{language}/{model}/{benchmark_name}/"
@@ -382,47 +553,38 @@ def rename_and_filter_em_column(df: pd.DataFrame, model_name: str) -> pd.DataFra
 
 # model 결과 불러오기
 def load_model_result(benchmark_name, model):
-    if benchmark_name == "ko_ifeval":
+    # ifeval 형식 (koifeval)
+    if benchmark_name in IFEVAL_BENCH:
         return load_ifeval_result(model, benchmark_name)
-    if benchmark_name == "ifeval":
-        return load_ifeval_result(model, benchmark_name)
-    # if benchmark_name == "ifbench":
-    #     return load_ifbench_result(model, benchmark_name)
-    if benchmark_name == "ifbench":
-        return load_ifeval_result(model, benchmark_name)
-    if benchmark_name == "drop":
-        return load_drop_result(model, benchmark_name)
-    if benchmark_name == "mbpp":
-        return load_mbpp_result(model, benchmark_name)
-    if benchmark_name == "humaneval":
-        return load_humaneval_result(model, benchmark_name)
-    if benchmark_name == "livecodebench":
-        return load_livecodebench_result(model, benchmark_name)
-    
-    df_list = []
-    categories = []
-    folder_paths = [f"./{language}/{model}/{benchmark_name}/"]
-    for folder_path in folder_paths:
-        jsonl_files = [f for f in os.listdir(folder_path) if f.endswith(('.json', '.jsonl', '.xlsx'))]
-        for file in jsonl_files:
-            file_path = os.path.join(folder_path, file)
-            if file.endswith('.json'):
-                df = pd.read_json(file_path)
-            elif file.endswith('.jsonl'):
-                df = pd.read_json(file_path, lines=True, encoding="utf-8-sig")
-            elif file.endswith('.xlsx'):
-                df = pd.read_excel(file_path)
 
-            base_filename = os.path.splitext(file)[0]
-            df['benchmark'] = benchmark_name
-            df['category'] = base_filename
-            df = rename_and_filter_em_column(df, model)
-            df = df.reset_index(drop=True)  # 행 번호 재설정
-            df['id_idx'] = df.index.astype(str)
-            df['id'] = df['category'].astype(str) + '_' + df['id_idx']
-            df = df.drop(columns=['id_idx'])
-            df_list.append(df)
-            categories.append(base_filename)
+    # 정규화 구조에서 실제 run 폴더들을 찾음
+    dirs = resolve_bench_dirs(model, LAW_BENCH_FOLDERS[benchmark_name])
+    if not dirs:
+        raise FileNotFoundError(f"[❌ 폴더없음] {model} / {benchmark_name}")
+
+    # jsonl/xlsx 수집 후 같은 task(재실행)면 최신 run 만 사용
+    files = _list_sample_files(dirs)
+    if not files:
+        raise FileNotFoundError(f"[❌ 없음] {model} / {benchmark_name}: samples jsonl/xlsx 없음")
+
+    df_list = []
+    for folder_path, file in files:
+        file_path = os.path.join(folder_path, file)
+        try:
+            df = read_sample_dataframe(file_path)
+        except Exception as e:
+            raise ValueError(f"[❌ xlsx읽기실패] {file_path}: {e}") from e
+
+        category = derive_category(benchmark_name, norm_task_name(file))
+        df['benchmark'] = benchmark_name
+        df['category'] = category
+        df = rename_and_filter_em_column(df, model)
+        df = df.reset_index(drop=True)  # 행 번호 재설정 (파일 단위)
+        df['id_idx'] = df.index.astype(str)
+        df['id'] = df['category'].astype(str) + '_' + df['id_idx']
+        df = df.drop(columns=['id_idx'])
+        df_list.append(df)
+
     full_df = pd.concat(df_list, ignore_index=True, sort=False)
     return full_df
 
@@ -455,13 +617,9 @@ def run_category_mcnemar(df: pd.DataFrame, benchmark_name: str, file_path: str):
     특정 벤치마크 내 카테고리별 유의성 검정을 수행하고 엑셀 저장
     """
     print(f"\n[INFO] {benchmark_name} 카테고리별 유의성 검정 시작")
-    # print(df[df['benchmark']])
-    if benchmark_name == "k_pragmatics":
-        sub_df = df[df['category'].str.startswith(("k_honorifics", "k_implicature", "k_lexicon"))]
-    elif benchmark_name == "k_pragmatics_hard":
-        sub_df = df[df['category'].str.startswith(("k_honorifics_hard", "k_implicature_hard", "k_lexicon_hard"))]
-    else:
-        sub_df = df[df['category'].str.startswith(f"{benchmark_name}_")]
+    # 해당 벤치마크에 속한 행만 → 그 안의 카테고리(서브테스크)별로 검정
+    # (benchmark 컬럼 기준이라 kmmlu↔kmmlu_pro, ko_sovereign↔ko_sovereign_law 오염 없음)
+    sub_df = df[df['benchmark'] == benchmark_name]
 
     results = []
     for category, group in sub_df.groupby("category"):
@@ -566,7 +724,7 @@ def save_accuracy_by_category(final_df: pd.DataFrame, file_path: str, model_A: s
 
     # ✅ 1. 벤치마크별
     for benchmark, group in final_df.groupby("benchmark"):
-        if benchmark in ["ko_ifeval", "ifeval", "ifbench"]:
+        if benchmark in ["ko_ifeval", "ifeval", "ifbench", "koifeval"]:
             row = compute_ifeval_score(final_df, benchmark, model_A, model_B, label="벤치마크")
             if row:
                 result_rows.append(row)
@@ -575,11 +733,39 @@ def save_accuracy_by_category(final_df: pd.DataFrame, file_path: str, model_A: s
                     row[f"{model_B}_정답률"],
                 )
             continue
-        row = compute_group_score(group, benchmark, model_A, model_B, label="벤치마크")
+        display_name = benchmark_display_name(benchmark)
+        row = compute_group_score(group, display_name, model_A, model_B, label="벤치마크")
         result_rows.append(row)
-        score_cache[benchmark] = (
+        score_cache[display_name] = (
             row[f"{model_A}_정답률"], row[f"{model_B}_정답률"]
         )
+        if benchmark == KBL_BAR_EXAM_BENCHMARK:
+            score_cache[benchmark] = score_cache[display_name]
+
+    # ✅ 1-1. kbl_bar_exam 분야별 (civil / criminal / public / responsibility)
+    if KBL_BAR_EXAM_BENCHMARK in benchmark_names:
+        for domain in KBL_BAR_EXAM_DOMAINS:
+            group = kbl_bar_exam_group(final_df, domain)
+            if group.empty:
+                continue
+            label = f"{KBL_BAR_EXAM_LABEL}_{domain}"
+            row = compute_group_score(group, label, model_A, model_B, label="벤치마크")
+            result_rows.append(row)
+            score_cache[label] = (
+                row[f"{model_A}_정답률"], row[f"{model_B}_정답률"]
+            )
+
+    # ✅ 1-2. kolbench 합산 (qa + reason + dq)
+    if any(b in benchmark_names for b in KOLBENCH_BENCHMARKS):
+        group = kolbench_combined_group(final_df)
+        if not group.empty:
+            row = compute_group_score(
+                group, KOLBENCH_LABEL, model_A, model_B, label="벤치마크"
+            )
+            result_rows.append(row)
+            score_cache[KOLBENCH_LABEL] = (
+                row[f"{model_A}_정답률"], row[f"{model_B}_정답률"]
+            )
 
     # ✅ 2. 카테고리별 (벤치마크 이름과 겹치면 생략)
     for category, group in final_df.groupby("category"):
@@ -598,7 +784,7 @@ def save_accuracy_by_category(final_df: pd.DataFrame, file_path: str, model_A: s
         if domain_name not in DOMAIN:
             continue
         instruction_benchmarks = [
-            b for b in ["ko_ifeval", "ifeval", "ifbench"]
+            b for b in ["ko_ifeval", "ifeval", "ifbench", "koifeval"]
             if b in final_df["benchmark"].unique()
         ]
         if not instruction_benchmarks:
@@ -795,7 +981,12 @@ def reorder_sheets(file_path: str, priority_order: list[str]):
     print(f"[OK] 시트 순서 재정렬 완료 → {priority_order} 우선")
 
 # Main
+print("\n" + "=" * 72)
+print(f"■ 유의성 검증  기준={model_A}   vs   대상={model_B}")
+print("=" * 72)
+
 all_results = []
+skipped = []
 
 for benchmark in BENCHMARKS:
     try:
@@ -803,25 +994,32 @@ for benchmark in BENCHMARKS:
         df_B = load_model_result(benchmark, model_B)
 
         if len(df_A) != len(df_B):
-            raise ValueError(f"[❌ 행 개수 불일치] {benchmark}: A={len(df_A)}행, B={len(df_B)}행")
+            raise ValueError(f"행 개수 불일치 (A={len(df_A)}, B={len(df_B)})")
 
         raw_df = df_A[['id', 'category', 'benchmark']].copy()
 
         merged = pd.merge(raw_df, df_A[['id', f"{model_A}_EM"]], on="id", how="left")
         merged = pd.merge(merged, df_B[['id', f"{model_B}_EM"]], on="id", how="left")
 
+        # 문항 대응(id 정렬) 불일치 방어
+        if merged[f"{model_A}_EM"].isna().any() or merged[f"{model_B}_EM"].isna().any():
+            raise ValueError("id 정렬 불일치 (카테고리/순서 상이)")
+
         all_results.append(merged)
-        print(f"[OK] {benchmark}: {merged.shape[0]} rows")
+        print(f"[OK]   {benchmark}: {merged.shape[0]} rows")
     except Exception as e:
-        print(f"[ERROR] {benchmark}: {e}")
-        sys.exit(1)
+        # 대상 모델에 없거나 문항수가 다른 벤치마크는 건너뜀
+        print(f"[SKIP] {benchmark}: {e}")
+        skipped.append(benchmark)
+        continue
 
 
 if all_results:
     final_df = pd.concat(all_results, ignore_index=True)
     final_df = final_df[['id', 'benchmark', 'category', f'{model_A}_EM', f'{model_B}_EM']]
-    os.makedirs("./result", exist_ok=True)
-    file_path = f"./result/{model_A}_{model_B}_{language}_결과.xlsx"
+    result_dir = REPO_ROOT / "result"
+    os.makedirs(result_dir, exist_ok=True)
+    file_path = str(result_dir / build_result_filename(model_A, model_B, language))
     final_df.to_excel(file_path, index=False)
     print(f"[완료] 저장됨 → {file_path}")
 
@@ -830,9 +1028,24 @@ if all_results:
 
     for benchmark_name, group in final_df.groupby("benchmark"):
         row = mcnemar_test(group, model_A, model_B)
-        row = {"벤치마크": benchmark_name, **row}
-
+        row = {"벤치마크": benchmark_display_name(benchmark_name), **row}
         mcnemar_results.append(row)
+
+    if KBL_BAR_EXAM_BENCHMARK in final_df["benchmark"].unique():
+        for domain in KBL_BAR_EXAM_DOMAINS:
+            group = kbl_bar_exam_group(final_df, domain)
+            if group.empty:
+                continue
+            row = mcnemar_test(group, model_A, model_B)
+            row = {"벤치마크": f"{KBL_BAR_EXAM_LABEL}_{domain}", **row}
+            mcnemar_results.append(row)
+
+    if any(b in final_df["benchmark"].unique() for b in KOLBENCH_BENCHMARKS):
+        group = kolbench_combined_group(final_df)
+        if not group.empty:
+            row = mcnemar_test(group, model_A, model_B)
+            row = {"벤치마크": KOLBENCH_LABEL, **row}
+            mcnemar_results.append(row)
 
     mcnemar_df = pd.DataFrame(mcnemar_results)
 
