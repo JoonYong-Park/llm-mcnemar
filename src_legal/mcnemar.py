@@ -39,7 +39,7 @@ def build_result_filename(model_A: str, model_B: str, lang: str) -> str:
 
 # 정규화된 법률 데이터 루트 (cwd 무관하게 repo 루트 기준)
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LEGAL_BASE = REPO_ROOT / "법률"
+LEGAL_BASE = REPO_ROOT / "법률지표"
 
 _TS_RE = re.compile(r"_\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+(?:_v\d+)?$")
 

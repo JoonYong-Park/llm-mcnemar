@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import pandas as pd
 import ast
@@ -8,10 +9,14 @@ from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 import sys
 
-model_A = "solar"
-model_B = "solar_2"
+from pathlib import Path
+
+model_A = "midm-300-pro-super-cpt-260722"     # 대상 모델
+model_B = "Solar-Open-2-250B-A15B-0"          # 기준 모델
 language = "한국적지표"
 mcnemar_version = "dsb"
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 if mcnemar_version == "dsb":
     from domain_config_dsb import *
@@ -30,6 +35,19 @@ elif language == "영어지표" :
 # elif language == "금융지표" :
 #     BENCHMARKS = FINANCE_BENCHMARKS
 #     DOMAIN = FINANCE_DOMAIN
+
+_TS_RE = re.compile(r"_\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+(?:_v\d+)?$")
+
+
+def norm_category_name(filename: str) -> str:
+    """samples_ 접두어 / cot_ 접두어 / 타임스탬프 제거 → 모델 간 동일 카테고리명."""
+    name = os.path.splitext(filename)[0]
+    if name.startswith("samples_"):
+        name = name[len("samples_"):]
+    name = _TS_RE.sub("", name)
+    if name.startswith("cot_"):
+        name = name[len("cot_"):]
+    return name
 
 # 정답률 점수 열 파란색 칠하기.
 def color_accuracy_columns(file_path: str, sheet_name: str, model_A: str, model_B: str):
@@ -477,31 +495,53 @@ def load_model_result(benchmark_name, model):
         return load_humaneval_result(model, benchmark_name)
     if benchmark_name == "livecodebench":
         return load_livecodebench_result(model, benchmark_name)
-    
-    df_list = []
-    categories = []
-    folder_paths = [f"./{language}/{model}/{benchmark_name}/"]
-    for folder_path in folder_paths:
-        jsonl_files = [f for f in os.listdir(folder_path) if f.endswith(('.json', '.jsonl', '.xlsx'))]
-        for file in jsonl_files:
-            file_path = os.path.join(folder_path, file)
-            if file.endswith('.json'):
-                df = pd.read_json(file_path)
-            elif file.endswith('.jsonl'):
-                df = pd.read_json(file_path, lines=True, encoding="utf-8-sig")
-            elif file.endswith('.xlsx'):
-                df = pd.read_excel(file_path)
 
-            base_filename = os.path.splitext(file)[0]
-            df['benchmark'] = benchmark_name
-            df['category'] = base_filename
-            df = rename_and_filter_em_column(df, model)
-            df = df.reset_index(drop=True)  # 행 번호 재설정
-            df['id_idx'] = df.index.astype(str)
-            df['id'] = df['category'].astype(str) + '_' + df['id_idx']
-            df = df.drop(columns=['id_idx'])
-            df_list.append(df)
-            categories.append(base_filename)
+    folder_path = str(REPO_ROOT / language / model / benchmark_name)
+    if not os.path.isdir(folder_path):
+        raise FileNotFoundError(f"[❌ 폴더없음] {folder_path}")
+
+    # samples_*.jsonl 우선, 없으면 samples_*.xlsx (results_*.json 제외)
+    files = [
+        f for f in os.listdir(folder_path)
+        if f.startswith("samples_") and f.endswith((".jsonl", ".xlsx")) and not f.startswith("._")
+    ]
+    if not files:
+        raise FileNotFoundError(f"[❌ 없음] {folder_path}에 samples_*.jsonl/xlsx 없음")
+
+    # 같은 카테고리(정규화명)면 jsonl 우선, 타임스탬프 최신 1개만
+    by_cat = {}
+    for f in files:
+        cat = norm_category_name(f)
+        is_jsonl = f.endswith(".jsonl")
+        m = _TS_RE.search(os.path.splitext(f)[0])
+        ts = m.group(0) if m else ""
+        prev = by_cat.get(cat)
+        if prev is None:
+            by_cat[cat] = (is_jsonl, ts, f)
+        else:
+            prev_jsonl, prev_ts, _ = prev
+            if is_jsonl and not prev_jsonl:
+                by_cat[cat] = (is_jsonl, ts, f)
+            elif is_jsonl == prev_jsonl and ts > prev_ts:
+                by_cat[cat] = (is_jsonl, ts, f)
+
+    df_list = []
+    for cat, (_is_jsonl, _ts, file) in sorted(by_cat.items()):
+        file_path = os.path.join(folder_path, file)
+        if file.endswith(".jsonl"):
+            df = pd.read_json(file_path, lines=True, encoding="utf-8-sig")
+        else:
+            df = pd.read_excel(file_path)
+
+        df["benchmark"] = benchmark_name
+        df["category"] = cat
+        df = rename_and_filter_em_column(df, model)
+        df = df.reset_index(drop=True)
+        df["id_idx"] = df.index.astype(str)
+        df["id"] = df["category"].astype(str) + "_" + df["id_idx"]
+        df = df.drop(columns=["id_idx"])
+        df_list.append(df)
+
     full_df = pd.concat(df_list, ignore_index=True, sort=False)
     return full_df
 
@@ -889,6 +929,9 @@ for benchmark in BENCHMARKS:
         merged = pd.merge(raw_df, df_A[['id', f"{model_A}_EM"]], on="id", how="left")
         merged = pd.merge(merged, df_B[['id', f"{model_B}_EM"]], on="id", how="left")
 
+        if merged[f"{model_A}_EM"].isna().any() or merged[f"{model_B}_EM"].isna().any():
+            raise ValueError(f"[❌ id 정렬 불일치] {benchmark}: 카테고리/순서 상이")
+
         all_results.append(merged)
         print(f"[OK] {benchmark}: {merged.shape[0]} rows")
     except Exception as e:
@@ -899,8 +942,9 @@ for benchmark in BENCHMARKS:
 if all_results:
     final_df = pd.concat(all_results, ignore_index=True)
     final_df = final_df[['id', 'benchmark', 'category', f'{model_A}_EM', f'{model_B}_EM']]
-    os.makedirs("./result", exist_ok=True)
-    file_path = f"./result/{model_A}_{model_B}_{language}_결과.xlsx"
+    result_dir = REPO_ROOT / "result"
+    os.makedirs(result_dir, exist_ok=True)
+    file_path = str(result_dir / f"{model_A}_{model_B}_{language}_결과.xlsx")
     final_df.to_excel(file_path, index=False)
     print(f"[완료] 저장됨 → {file_path}")
 
