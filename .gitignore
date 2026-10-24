@@ -19,16 +19,11 @@ venv/
 .Spotlight-V100
 .Trashes
 
-# data
-*영어지표*/
-*한국어지표*/
-*한국적지표*/
-*법률지표*/
-rename_log*
-# res_mcnemar/
-# res_merge_data*/
-res_*/
-temp/
-dataset/
+# data / output
+# Only the example data (data/example) is tracked
+data/*
+!data/example/
 result/
-result_legal/
+
+# Local backup of real data
+backup/
